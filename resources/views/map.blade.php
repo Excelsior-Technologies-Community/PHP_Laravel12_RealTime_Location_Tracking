@@ -215,7 +215,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAG51y1x54XuveIKH4OEcns_v2ZvVJqJfY"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?"></script>
     <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
     <script>
         // Global variables
