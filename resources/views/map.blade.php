@@ -99,6 +99,28 @@
             opacity: .9;
 
         }
+
+        .activity-item {
+
+            border-left: 4px solid #0d6efd;
+
+            padding: 12px;
+
+            margin-bottom: 10px;
+
+            background: #f8f9fa;
+
+            border-radius: 8px;
+
+        }
+
+        .activity-time {
+
+            font-size: 12px;
+
+            color: #777;
+
+        }
     </style>
 
 
@@ -271,8 +293,79 @@
 
         </div>
 
+        <!-- Tracking Session Summary -->
 
+        <div class="card mb-4">
 
+            <div class="card-header bg-primary text-white">
+
+                <h5 class="mb-0">
+
+                    <i class="bi bi-clock-history"></i>
+
+                    Tracking Session Summary
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div class="row text-center">
+
+                    <div class="col-md-2">
+
+                        <h6>Started</h6>
+
+                        <h5 id="session-start">--</h5>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <h6>Stopped</h6>
+
+                        <h5 id="session-end">--</h5>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <h6>Duration</h6>
+
+                        <h5 id="session-duration">00:00:00</h5>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <h6>Updates</h6>
+
+                        <h5 id="update-count">0</h5>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <h6>Last Latitude</h6>
+
+                        <h5 id="last-lat">--</h5>
+
+                    </div>
+
+                    <div class="col-md-2">
+
+                        <h6>Last Longitude</h6>
+
+                        <h5 id="last-lng">--</h5>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
 
 
         <!-- Controls -->
@@ -354,7 +447,42 @@
         </div>
 
 
+        <!-- Live Activity Feed -->
 
+        <div class="card mb-4">
+
+            <div class="card-header bg-success text-white">
+
+                <h5 class="mb-0">
+
+                    <i class="bi bi-activity"></i>
+
+                    Live Activity Feed
+
+                </h5>
+
+            </div>
+
+            <div class="card-body">
+
+                <div
+                    id="activity-feed"
+                    style="
+                height:250px;
+                overflow-y:auto;
+            ">
+
+                    <div class="text-muted text-center">
+
+                        Waiting for activity...
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
 
 
 
@@ -648,6 +776,12 @@
 
         let currentLng = 78.9629;
 
+        let sessionStartedAt = null;
+
+        let sessionTimer = null;
+
+        let updateCounter = 0;
+
 
 
 
@@ -785,10 +919,38 @@
 
 
 
-                    sendLocation(
-                        currentLat,
-                        currentLng
+                    if (updateCounter === 0) {
+
+                        sendLocation(
+                            currentLat,
+                            currentLng,
+                            "start"
+                        );
+
+                    } else {
+
+                        sendLocation(
+                            currentLat,
+                            currentLng,
+                            "move"
+                        );
+
+                    }
+
+                    addActivity(
+                        "Location Updated",
+                        "bi-geo-alt-fill"
                     );
+
+                    updateCounter++;
+
+                    document.getElementById("update-count").innerHTML = updateCounter;
+
+                    document.getElementById("last-lat").innerHTML =
+                        currentLat.toFixed(6);
+
+                    document.getElementById("last-lng").innerHTML =
+                        currentLng.toFixed(6);
 
 
 
@@ -828,7 +990,29 @@
 
             isTracking = true;
 
+            sessionStartedAt = new Date();
 
+            document.getElementById("session-start").innerHTML =
+                sessionStartedAt.toLocaleTimeString();
+
+            document.getElementById("session-end").innerHTML = "--";
+
+            document.getElementById("session-duration").innerHTML = "00:00:00";
+
+            updateCounter = 0;
+
+            document.getElementById("update-count").innerHTML = "0";
+
+            document.getElementById("last-lat").innerHTML = "--";
+            document.getElementById("last-lng").innerHTML = "--";
+
+            startSessionTimer();
+
+
+            addActivity(
+                "Tracking Started",
+                "bi-play-circle-fill"
+            );
 
             document.getElementById(
                 "start-btn"
@@ -899,7 +1083,30 @@
                 "live-status"
             ).className = "status-offline";
 
+            // Reset accuracy
+            document.getElementById("accuracy-value").innerHTML = "--";
 
+            // Reset last coordinates
+            document.getElementById("last-lat").innerHTML = "--";
+            document.getElementById("last-lng").innerHTML = "--";
+
+            const endTime = new Date();
+
+            document.getElementById("session-end").innerHTML =
+                endTime.toLocaleTimeString();
+
+            clearInterval(sessionTimer);
+
+            sendLocation(
+                currentLat,
+                currentLng,
+                "stop"
+            );
+
+            addActivity(
+                "Tracking Stopped",
+                "bi-stop-circle-fill"
+            );
 
         }
 
@@ -914,7 +1121,7 @@
         */
 
 
-        function sendLocation(lat, lng) {
+        function sendLocation(lat, lng, action = "move") {
 
 
 
@@ -938,11 +1145,9 @@
 
 
                         body: JSON.stringify({
-
                             lat: lat,
-
-                            lng: lng
-
+                            lng: lng,
+                            action: action
                         })
 
 
@@ -956,12 +1161,16 @@
 
                 .then(data => {
 
+                    console.log("Location Saved", data);
 
-                    console.log(
-                        "Location Saved",
-                        data
-                    );
+                    if (data.message !== "Movement less than 30 meters. Record not saved.") {
 
+                        addActivity(
+                            data.message,
+                            "bi-check-circle-fill"
+                        );
+
+                    }
 
                 })
 
@@ -1030,7 +1239,6 @@
                     );
 
 
-
                     let lat =
                         parseFloat(
                             data.location.latitude
@@ -1044,6 +1252,20 @@
                         );
 
 
+                    addActivity(
+                        "Live Location Received",
+                        "bi-broadcast"
+                    );
+
+                    updateCounter++;
+
+                    document.getElementById("update-count").innerHTML = updateCounter;
+
+                    document.getElementById("last-lat").innerHTML =
+                        lat.toFixed(6);
+
+                    document.getElementById("last-lng").innerHTML =
+                        lng.toFixed(6);
 
                     /*
                     Update Map Marker
@@ -1108,9 +1330,6 @@
             );
 
 
-
-
-
             /*
             Connection Success
             */
@@ -1130,13 +1349,9 @@
             );
 
 
-
-
-
             /*
             Connection Lost
             */
-
 
             pusher.connection.bind(
                 "disconnected",
@@ -1163,16 +1378,85 @@
 
         }
 
+        function startSessionTimer() {
 
+            clearInterval(sessionTimer);
 
+            sessionTimer = setInterval(function() {
 
+                if (!sessionStartedAt) return;
 
+                let seconds = Math.floor(
+                    (new Date() - sessionStartedAt) / 1000
+                );
+
+                let hrs = String(
+                    Math.floor(seconds / 3600)
+                ).padStart(2, '0');
+
+                let mins = String(
+                    Math.floor((seconds % 3600) / 60)
+                ).padStart(2, '0');
+
+                let secs = String(
+                    seconds % 60
+                ).padStart(2, '0');
+
+                document.getElementById("session-duration").innerHTML =
+                    hrs + ":" + mins + ":" + secs;
+
+            }, 1000);
+
+        }
+
+        function addActivity(message, icon = "bi-info-circle") {
+
+            let feed = document.getElementById("activity-feed");
+
+            let time = new Date().toLocaleTimeString();
+
+            let html = `
+
+        <div class="activity-item">
+
+            <div>
+
+                <i class="bi ${icon} text-primary"></i>
+
+                ${message}
+
+            </div>
+
+            <div class="activity-time">
+
+                ${time}
+
+            </div>
+
+        </div>
+
+    `;
+
+            if (feed.innerHTML.includes("Waiting for activity")) {
+
+                feed.innerHTML = "";
+
+            }
+
+            feed.insertAdjacentHTML("afterbegin", html);
+
+            while (feed.children.length > 15) {
+
+                feed.removeChild(feed.lastChild);
+
+            }
+
+        }
         /*
         |--------------------------------------------------------------------------
         | Browser Close / Tab Close
         |--------------------------------------------------------------------------
         */
-
 
         window.addEventListener(
             "beforeunload",
@@ -1188,32 +1472,6 @@
 
 
                 }
-
-
-            });
-
-
-
-
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Initialize Everything
-        |--------------------------------------------------------------------------
-        */
-
-
-        document.addEventListener(
-            "DOMContentLoaded",
-            function() {
-
-
-                initMap();
-
-
-                initPusher();
-
 
 
             });
