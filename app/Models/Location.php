@@ -9,14 +9,25 @@ class Location extends Model
 {
     protected $fillable = [
         'user_name',
+        'vehicle_id',
+        'vehicle_type',
         'latitude',
         'longitude',
+        'speed',
+        'heading',
+        'battery_level',
+        'trip_id',
         'status',
         'last_seen',
     ];
 
     protected $casts = [
         'last_seen' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'speed' => 'float',
+        'heading' => 'integer',
+        'battery_level' => 'integer',
     ];
 
     /**
@@ -30,6 +41,7 @@ class Location extends Model
 
         return $query->where(function ($q) use ($search) {
             $q->where('user_name', 'like', "%{$search}%")
+                ->orWhere('vehicle_id', 'like', "%{$search}%")
                 ->orWhere('latitude', 'like', "%{$search}%")
                 ->orWhere('longitude', 'like', "%{$search}%")
                 ->orWhere('status', 'like', "%{$search}%");
@@ -45,22 +57,15 @@ class Location extends Model
     }
 
     /**
-     * Get formatted last seen.
+     * Get human-readable vehicle icon class.
      */
-    public function getLastSeenAttribute($value)
+    public function getVehicleIconAttribute()
     {
-        return $value
-            ? \Carbon\Carbon::parse($value)->format('d M Y h:i A')
-            : '-';
-    }
-
-    /**
-     * Get badge class for status.
-     */
-    public function getStatusColorAttribute()
-    {
-        return $this->status === 'Online'
-            ? 'success'
-            : 'secondary';
+        return match ($this->vehicle_type) {
+            'bike' => 'bi-bicycle',
+            'truck' => 'bi-truck',
+            'ambulance' => 'bi-hospital',
+            default => 'bi-car-front-fill',
+        };
     }
 }
